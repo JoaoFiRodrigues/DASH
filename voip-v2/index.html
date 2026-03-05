@@ -67,6 +67,35 @@ body::before {
   border-color:var(--teal); transform:translateY(-3px);
   box-shadow:0 8px 20px rgba(13,126,110,0.12);
 }
+.file-card.selected {
+  border-color:var(--teal); background:var(--teal-lt);
+  box-shadow:0 8px 20px rgba(13,126,110,0.15);
+}
+.file-card.selected .file-card-name { color:var(--teal); }
+.file-card-check {
+  position:absolute; top:10px; right:10px;
+  width:20px; height:20px; border-radius:50%;
+  background:var(--teal); color:white;
+  font-size:0.65rem; display:none;
+  align-items:center; justify-content:center;
+}
+.file-card { position:relative; }
+.file-card.selected .file-card-check { display:flex; }
+
+.picker-actions {
+  display:flex; align-items:center; gap:16px;
+  animation:slideUp 0.4s ease both;
+}
+.btn-ver-dash {
+  background:var(--teal); color:white; border:none; border-radius:10px;
+  font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:700;
+  padding:14px 32px; cursor:pointer; letter-spacing:0.04em;
+  transition:opacity 0.2s, transform 0.2s;
+  opacity:0.4; pointer-events:none;
+}
+.btn-ver-dash.ready { opacity:1; pointer-events:all; }
+.btn-ver-dash.ready:hover { opacity:0.88; transform:translateY(-1px); }
+.sel-count { font-size:0.8rem; color:var(--ink2); }
 
 .file-card-icon { font-size:2rem; margin-bottom:10px; }
 .file-card-name {
@@ -247,6 +276,13 @@ body::before {
       Carregando arquivos...
     </div>
   </div>
+
+  <div class="picker-actions">
+    <div class="sel-count" id="selCount">Nenhum arquivo selecionado</div>
+    <button class="btn-ver-dash" id="btnVerDash" onclick="goToDashboard()">
+      Ver Dashboard →
+    </button>
+  </div>
 </div>
 
 <!-- ═══════════ DASHBOARD ═══════════ -->
@@ -407,10 +443,13 @@ function renderPicker() {
       .trim() || f.filename;
 
     card.innerHTML = `
+      <div class="file-card-check">✓</div>
       <div class="file-card-icon">📊</div>
       <div class="file-card-name">${name}</div>
       <div class="file-card-meta">${date}</div>
     `;
+    card.dataset.filename = f.filename;
+    card.classList.toggle('selected', activeFiles.includes(f.filename));
     card.onclick = () => selectFile(f);
     grid.appendChild(card);
   });
@@ -446,6 +485,28 @@ async function selectFile(fileObj) {
   // Merge all selected
   allData = activeFiles.flatMap(fn => loadedData[fn] || []);
 
+  // Atualiza visual dos cards
+  document.querySelectorAll('.file-card').forEach(c => {
+    const fn = c.dataset.filename;
+    if (fn) {
+      c.classList.toggle('selected', activeFiles.includes(fn));
+    }
+  });
+
+  // Atualiza contador e botão
+  const count = activeFiles.length;
+  const countEl = document.getElementById('selCount');
+  const btnEl   = document.getElementById('btnVerDash');
+  if (countEl) {
+    countEl.textContent = count === 0
+      ? 'Nenhum arquivo selecionado'
+      : count === 1 ? '1 arquivo selecionado' : `${count} arquivos selecionados`;
+  }
+  if (btnEl) btnEl.classList.toggle('ready', count > 0);
+}
+
+function goToDashboard() {
+  if (!activeFiles.length) return;
   showDashboard();
   updatePills();
   applyFilters();
@@ -500,8 +561,13 @@ function updatePills() {
 function backToPicker() {
   document.getElementById('pickerScreen').style.display = 'flex';
   document.getElementById('dash').style.display = 'none';
-  activeFiles = [];
   renderPicker();
+  // Atualiza contador
+  const count = activeFiles.length;
+  const countEl = document.getElementById('selCount');
+  const btnEl   = document.getElementById('btnVerDash');
+  if (countEl) countEl.textContent = count === 0 ? 'Nenhum arquivo selecionado' : count === 1 ? '1 arquivo selecionado' : `${count} arquivos selecionados`;
+  if (btnEl) btnEl.classList.toggle('ready', count > 0);
 }
 
 // ── FILTERS ──────────────────────────────────────────────────────────
