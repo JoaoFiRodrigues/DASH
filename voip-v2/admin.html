@@ -232,18 +232,29 @@ function auth() {
   const key = document.getElementById('keyInput').value.trim();
   if (!key) return;
   uploadKey = key;
-  // Try to list files to validate key
-  fetch('/api/files')
+
+  const errEl = document.getElementById('authErr');
+  errEl.style.display = 'none';
+
+  fetch('/api/auth', {
+    method: 'POST',
+    headers: { 'x-upload-key': key }
+  })
     .then(r => r.json())
     .then(data => {
-      if (data.error) throw new Error(data.error);
+      if (!data.ok) {
+        errEl.textContent = 'Chave incorreta.';
+        errEl.style.display = 'block';
+        return;
+      }
       document.getElementById('authWall').style.display = 'none';
       document.getElementById('main').style.display = 'block';
-      document.getElementById('dashLink').textContent = window.location.origin + '/index.html';
+      document.getElementById('dashLink').textContent = window.location.origin;
       loadFiles();
     })
     .catch(() => {
-      document.getElementById('authErr').style.display = 'block';
+      errEl.textContent = 'Erro de conexao. Tente novamente.';
+      errEl.style.display = 'block';
     });
 }
 
