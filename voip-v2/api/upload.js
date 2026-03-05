@@ -20,7 +20,7 @@ module.exports = async function handler(req, res) {
       .replace(/[^\w.\- ]/g, '_');
 
     const blob = await put(`excels/${filename}`, buffer, {
-      access: 'private',
+      access: 'public',
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       addRandomSuffix: false,
     });
