@@ -508,6 +508,7 @@ async function selectFile(fileObj) {
 function goToDashboard() {
   if (!activeFiles.length) return;
   showDashboard();
+  rebuildFilters();
   updatePills();
   applyFilters();
 }
@@ -540,12 +541,32 @@ function showDashboard() {
   document.getElementById('dash').style.display = 'block';
   document.getElementById('dateBadge').textContent =
     new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  rebuildFilters();
+}
 
-  // Populate filters
-  const statuses = [...new Set(allData.map(d=>d.status).filter(Boolean))].sort();
-  const resps    = [...new Set(allData.map(d=>d.responsavel).filter(Boolean))].sort();
-  document.getElementById('fStatus').innerHTML    = '<option value="">Todos os status</option>'      + statuses.map(s=>`<option value="${s}">${s}</option>`).join('');
-  document.getElementById('fResponsavel').innerHTML = '<option value="">Todos os responsáveis</option>' + resps.map(r=>`<option value="${r}">${r}</option>`).join('');
+function rebuildFilters() {
+  // Usa TODOS os dados de TODOS os arquivos carregados (não só os selecionados)
+  // para garantir que todos os responsáveis e status apareçam no filtro
+  const todosDados = Object.values(loadedData).flat();
+
+  const statuses = [...new Set(todosDados.map(d=>d.status).filter(Boolean))].sort();
+  const resps    = [...new Set(todosDados.map(d=>d.responsavel).filter(Boolean))].sort();
+
+  // Preserva seleção atual antes de reconstruir
+  const curStatus = document.getElementById('fStatus').value;
+  const curResp   = document.getElementById('fResponsavel').value;
+
+  document.getElementById('fStatus').innerHTML =
+    '<option value="">Todos os status</option>' +
+    statuses.map(s=>`<option value="${s}">${s}</option>`).join('');
+
+  document.getElementById('fResponsavel').innerHTML =
+    '<option value="">Todos os responsáveis</option>' +
+    resps.map(r=>`<option value="${r}">${r}</option>`).join('');
+
+  // Restaura seleção anterior se ainda existir
+  if (curStatus  && statuses.includes(curStatus))  document.getElementById('fStatus').value = curStatus;
+  if (curResp    && resps.includes(curResp))        document.getElementById('fResponsavel').value = curResp;
 }
 
 function updatePills() {
