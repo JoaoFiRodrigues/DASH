@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoIP Dashboard — Upload</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f0ede8; --surface:#fff; --surface2:#f7f4f0;
+  --border:#e2ddd8; --ink:#1a1714; --ink2:#6b6560;
+  --teal:#0d7e6e; --teal-lt:#e6f4f1;
+  --rose:#c0394b; --rose-lt:#fdeaed;
+  --amber:#c4780a; --amber-lt:#fdf3e3;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); color:var(--ink);
+  font-family:'Outfit',sans-serif;
+  min-height:100vh; padding:40px;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:0;
+}
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.wrap { max-width:720px; margin:0 auto; position:relative; z-index:1; }
+
+.header { margin-bottom:36px; animation:fadeUp 0.5s ease both; }
+.eyebrow { font-size:0.75rem; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--teal); margin-bottom:6px; }
+h1 { font-family:'Bebas Neue',sans-serif; font-size:3.2rem; letter-spacing:0.05em; color:var(--ink); line-height:1; }
+.subtitle { font-size:0.85rem; color:var(--ink2); margin-top:8px; }
+
+/* AUTH */
+#authWall {
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:36px; animation:fadeUp 0.4s ease both;
+}
+.auth-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.08em; margin-bottom:20px; }
+.field { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+.field label { font-size:0.75rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink2); }
+.field input {
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  font-family:'Outfit',sans-serif; font-size:0.9rem; color:var(--ink);
+  padding:10px 14px; outline:none;
+  transition:border-color 0.2s;
+}
+.field input:focus { border-color:var(--teal); }
+.btn-primary {
+  background:var(--teal); color:white; border:none; border-radius:8px;
+  font-family:'Outfit',sans-serif; font-size:0.85rem; font-weight:600;
+  padding:11px 24px; cursor:pointer; letter-spacing:0.04em;
+  transition:opacity 0.2s;
+}
+.btn-primary:hover { opacity:0.88; }
+.btn-primary:disabled { opacity:0.4; cursor:default; }
+.auth-err { color:var(--rose); font-size:0.78rem; margin-top:8px; display:none; }
+
+/* MAIN */
+#main { display:none; animation:fadeUp 0.4s ease both; }
+
+/* UPLOAD ZONE */
+.upload-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:28px; margin-bottom:20px;
+}
+.card-title {
+  font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.08em;
+  color:var(--ink); margin-bottom:18px;
+  display:flex; align-items:center; gap:8px;
+}
+.ctag { width:8px; height:8px; border-radius:50%; }
+
+.drop-zone {
+  border:2px dashed var(--border); border-radius:12px;
+  padding:36px 24px; display:flex; flex-direction:column;
+  align-items:center; gap:12px; cursor:pointer; position:relative;
+  background:var(--surface2); transition:border-color 0.2s, background 0.2s;
+  text-align:center;
+}
+.drop-zone:hover, .drop-zone.over { border-color:var(--teal); background:var(--teal-lt); }
+.drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.drop-icon { font-size:2rem; }
+.drop-label { font-size:0.85rem; font-weight:600; color:var(--ink); }
+.drop-sub { font-size:0.75rem; color:var(--ink2); }
+
+/* FILE QUEUE */
+.queue { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+.q-item {
+  display:flex; align-items:center; gap:12px;
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:10px 14px;
+}
+.q-icon { font-size:1.2rem; }
+.q-name { flex:1; font-size:0.82rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.q-size { font-size:0.72rem; color:var(--ink2); flex-shrink:0; }
+.q-remove { background:none; border:none; color:var(--ink2); cursor:pointer; font-size:1rem; padding:2px 6px; border-radius:4px; transition:color 0.2s; }
+.q-remove:hover { color:var(--rose); }
+.q-status { font-size:0.72rem; font-weight:600; flex-shrink:0; }
+
+.upload-actions { display:flex; align-items:center; gap:12px; margin-top:16px; }
+.upload-info { font-size:0.78rem; color:var(--ink2); }
+
+/* FILES LIST */
+.files-list { display:flex; flex-direction:column; gap:10px; }
+.file-item {
+  display:flex; align-items:center; gap:14px;
+  background:var(--surface2); border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px; transition:border-color 0.2s;
+}
+.file-item:hover { border-color:var(--teal); }
+.file-thumb {
+  width:40px; height:40px; background:var(--teal-lt); border-radius:10px;
+  display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;
+}
+.file-info { flex:1; min-width:0; }
+.file-name { font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.file-meta { font-size:0.72rem; color:var(--ink2); margin-top:2px; }
+.file-actions { display:flex; gap:8px; flex-shrink:0; }
+.btn-sm {
+  background:none; border:1px solid var(--border); border-radius:6px;
+  font-family:'Outfit',sans-serif; font-size:0.72rem; color:var(--ink2);
+  padding:5px 10px; cursor:pointer; transition:all 0.2s;
+}
+.btn-sm:hover { border-color:var(--teal); color:var(--teal); }
+.btn-sm.del:hover { border-color:var(--rose); color:var(--rose); }
+
+.empty-files { text-align:center; padding:32px; color:var(--ink2); font-size:0.82rem; }
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:24px; right:24px; z-index:999;
+  background:var(--ink); color:white; border-radius:10px;
+  padding:12px 20px; font-size:0.82rem; font-weight:500;
+  box-shadow:0 8px 24px rgba(0,0,0,0.2);
+  transform:translateY(80px); opacity:0;
+  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+  pointer-events:none;
+}
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.ok   { background:var(--teal); }
+.toast.err  { background:var(--rose); }
+
+/* LINK SECTION */
+.link-box {
+  background:var(--teal-lt); border:1px solid rgba(13,126,110,0.25); border-radius:12px;
+  padding:16px 20px; display:flex; align-items:center; gap:12px;
+}
+.link-url { flex:1; font-size:0.8rem; color:var(--teal); font-weight:500; word-break:break-all; }
+.btn-copy {
+  background:var(--teal); color:white; border:none; border-radius:6px;
+  font-family:'Outfit',sans-serif; font-size:0.75rem; font-weight:600;
+  padding:7px 14px; cursor:pointer; flex-shrink:0; transition:opacity 0.2s;
+}
+.btn-copy:hover { opacity:0.85; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="eyebrow">VoIP Analytics · Admin</div>
+    <h1>Painel de<br>Upload</h1>
+    <div class="subtitle">Envie os Excels extraídos do sistema. A gestora verá todos disponíveis para análise.</div>
+  </div>
+
+  <!-- AUTH -->
+  <div id="authWall">
+    <div class="auth-title">🔐 Acesso Restrito</div>
+    <div class="field">
+      <label>Chave de Upload</label>
+      <input type="password" id="keyInput" placeholder="Digite a chave de acesso" onkeydown="if(event.key==='Enter')auth()">
+    </div>
+    <button class="btn-primary" onclick="auth()">Entrar</button>
+    <div class="auth-err" id="authErr">Chave incorreta.</div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- LINK PARA GESTORA -->
+    <div class="upload-card" style="margin-bottom:20px">
+      <div class="card-title"><span class="ctag" style="background:var(--teal)"></span> Link para a Gestora</div>
+      <div class="link-box">
+        <div class="link-url" id="dashLink"></div>
+        <button class="btn-copy" onclick="copyLink()">Copiar</button>
+      </div>
+      <div style="font-size:0.74rem;color:var(--ink2);margin-top:8px">Envie esse link para a gestora — ela consegue ver e escolher os arquivos sem precisar de senha.</div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="upload-card">
+      <div class="card-title"><span class="ctag" style="background:var(--amber)"></span> Enviar Novos Arquivos</div>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
+        <div class="drop-icon">📂</div>
+        <div class="drop-label">Arraste um ou mais arquivos aqui</div>
+        <div class="drop-sub">Você pode enviar vários Excels de uma vez</div>
+      </div>
+
+      <div class="queue" id="queue"></div>
+
+      <div class="upload-actions">
+        <button class="btn-primary" id="btnUpload" onclick="uploadAll()" disabled>⬆ Enviar Arquivos</button>
+        <div class="upload-info" id="uploadInfo"></div>
+      </div>
+    </div>
+
+    <!-- ARQUIVOS SALVOS -->
+    <div class="upload-card">
+      <div class="card-title"><span class="ctag" style="background:var(--slate,#3d5a80)"></span> Arquivos Salvos</div>
+      <div class="files-list" id="filesList">
+        <div class="empty-files">Carregando...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let uploadKey = '';
+let fileQueue = [];
+
+// ── AUTH ──────────────────────────────────────────────────────────────
+function auth() {
+  const key = document.getElementById('keyInput').value.trim();
+  if (!key) return;
+  uploadKey = key;
+  // Try to list files to validate key
+  fetch('/api/files')
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      document.getElementById('authWall').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      document.getElementById('dashLink').textContent = window.location.origin + '/index.html';
+      loadFiles();
+    })
+    .catch(() => {
+      document.getElementById('authErr').style.display = 'block';
+    });
+}
+
+// ── DROP ZONE ──────────────────────────────────────────────────────────
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  addFiles([...e.dataTransfer.files]);
+});
+fi.addEventListener('change', e => { addFiles([...e.target.files]); fi.value=''; });
+
+function addFiles(files) {
+  files.forEach(f => {
+    if (!f.name.match(/\.xlsx?$/i)) return;
+    fileQueue.push({ file: f, status: 'pending' });
+  });
+  renderQueue();
+}
+
+function removeFromQueue(idx) {
+  fileQueue.splice(idx, 1);
+  renderQueue();
+}
+
+function renderQueue() {
+  const q = document.getElementById('queue');
+  const btn = document.getElementById('btnUpload');
+  const info = document.getElementById('uploadInfo');
+  q.innerHTML = '';
+
+  if (!fileQueue.length) {
+    btn.disabled = true;
+    info.textContent = '';
+    return;
+  }
+
+  const pending = fileQueue.filter(f => f.status === 'pending').length;
+  btn.disabled = pending === 0;
+  info.textContent = `${fileQueue.length} arquivo(s) na fila`;
+
+  fileQueue.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'q-item';
+    const statusColor = { pending:'#6b6560', uploading:'#c4780a', done:'#0d7e6e', error:'#c0394b' };
+    const statusLabel = { pending:'aguardando', uploading:'enviando...', done:'✓ enviado', error:'✗ erro' };
+    div.innerHTML = `
+      <div class="q-icon">📊</div>
+      <div class="q-name">${item.file.name}</div>
+      <div class="q-size">${(item.file.size/1024).toFixed(0)} KB</div>
+      <div class="q-status" style="color:${statusColor[item.status]}">${statusLabel[item.status]}</div>
+      ${item.status === 'pending' ? `<button class="q-remove" onclick="removeFromQueue(${i})">✕</button>` : ''}
+    `;
+    q.appendChild(div);
+  });
+}
+
+// ── UPLOAD ────────────────────────────────────────────────────────────
+async function uploadAll() {
+  const btn = document.getElementById('btnUpload');
+  btn.disabled = true;
+
+  for (let i = 0; i < fileQueue.length; i++) {
+    const item = fileQueue[i];
+    if (item.status !== 'pending') continue;
+
+    item.status = 'uploading';
+    renderQueue();
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'x-upload-key': uploadKey,
+          'x-filename': item.file.name,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: item.file,
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Erro no upload');
+      item.status = 'done';
+    } catch (e) {
+      item.status = 'error';
+      toast('Erro ao enviar: ' + item.file.name, 'err');
+    }
+    renderQueue();
+  }
+
+  const done  = fileQueue.filter(f => f.status === 'done').length;
+  const error = fileQueue.filter(f => f.status === 'error').length;
+
+  if (done > 0) toast(`${done} arquivo(s) enviado(s) com sucesso!`, 'ok');
+
+  setTimeout(() => {
+    fileQueue = fileQueue.filter(f => f.status !== 'done');
+    renderQueue();
+    loadFiles();
+  }, 1500);
+}
+
+// ── FILES LIST ────────────────────────────────────────────────────────
+async function loadFiles() {
+  try {
+    const res = await fetch('/api/files');
+    const { files } = await res.json();
+
+    const el = document.getElementById('filesList');
+    if (!files.length) {
+      el.innerHTML = '<div class="empty-files">Nenhum arquivo enviado ainda.</div>';
+      return;
+    }
+
+    el.innerHTML = files.map(f => `
+      <div class="file-item">
+        <div class="file-thumb">📊</div>
+        <div class="file-info">
+          <div class="file-name">${f.filename}</div>
+          <div class="file-meta">${formatDate(f.uploadedAt)} · ${(f.size/1024).toFixed(0)} KB</div>
+        </div>
+        <div class="file-actions">
+          <button class="btn-sm del" onclick="deleteFile('${f.url}', '${f.filename}')">🗑 Remover</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('filesList').innerHTML = '<div class="empty-files">Erro ao carregar arquivos.</div>';
+  }
+}
+
+async function deleteFile(url, name) {
+  if (!confirm(`Remover "${name}"?`)) return;
+  try {
+    await fetch('/api/delete', {
+      method: 'DELETE',
+      headers: { 'x-upload-key': uploadKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    toast('Arquivo removido.', 'ok');
+    loadFiles();
+  } catch(e) {
+    toast('Erro ao remover.', 'err');
+  }
+}
+
+function copyLink() {
+  const link = window.location.origin + '/index.html';
+  navigator.clipboard.writeText(link);
+  toast('Link copiado!', 'ok');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function formatDate(iso) {
+  return new Date(iso).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+</script>
+</body>
+</html>
